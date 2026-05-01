@@ -62,7 +62,7 @@ void Check(unsigned int& imgnum, unsigned char* data) {
 
 void loadTextures() {
     //load the background texture
-    data = stbi_load("D:/Users/OneDrive/Desktop/Computer Graphic/Project/Background.jpg", &width, &height, &nrChannel, 0);
+    data = stbi_load("Background.jpg", &width, &height, &nrChannel, 0);
     if (data) {
         Check(backTexture, data);
     }
@@ -70,7 +70,7 @@ void loadTextures() {
         std::cout << "failed to load background Texture" << std::endl;
     }
     //load the track texture
-    data = stbi_load("D:/Users/OneDrive/Desktop/Computer Graphic/Project/Track.jpg", &width, &height, &nrChannel, 0);
+    data = stbi_load("Track.jpg", &width, &height, &nrChannel, 0);
     if (data) {
         Check(TrackTexture, data);
     }
@@ -78,7 +78,7 @@ void loadTextures() {
         std::cout << "failed to load Track Texture" << std::endl;
     }
     //load the FinishLine texture
-    data = stbi_load("D:/Users/OneDrive/Desktop/Computer Graphic/Project/race-finish.jpg", &width, &height, &nrChannel, 0);
+    data = stbi_load("race-finish.jpg", &width, &height, &nrChannel, 0);
     if (data) {
         Check(FLineTexture, data);
     }
