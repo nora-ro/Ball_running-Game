@@ -5,19 +5,41 @@
 
 // --- Global Variables ---
 float ballX = 0.0f, ballY = 0.5f, ballZ = 5.0f;
+int currentLane = 1; // 0 = left, 1 = center, 2 = right
+float lanes[3] = { -2.0f, 0.0f, 2.0f };
 bool isFullScreen = true;
+//--- jumb variables ---
+bool jumping = false;
+bool falling = false;
+float groundY = 0.5f;
+float jumpHeight = 3.5f;
 // --- for Texture ---
 unsigned char* data = NULL;
 unsigned int backTexture, TrackTexture, FLineTexture;
 int width, height, nrChannel;
+// --- collision variables ---
+bool gameStarted = false;
+bool gameWon = false;
+float ballRadius = 0.6f;
+float finishZ = -100.0f;
+bool gameOver = false;
+// --- obstacle balls ---
+const int obstacleCount = 6;
+float obstacleZ[obstacleCount] ={ -10.0f, -25.0f,-40.0f,-55.0f,-70.0f,-85.0f};
+int obstacleLane[obstacleCount] ={0,2,1,0,2,1};
+float obstacleRadius = 0.35f;
+
 
 // --- Function Prototypes ---
-void Check(unsigned int& texture ,unsigned char* imgnum);
+void Check(unsigned int& texture, unsigned char* imgnum);
 void loadTextures();
 void drawBackground();
 void drawTrack();
 void drawFinishLine();
 void drawBall();
+void drawObstacles();
+void collision();
+
 
 // --- Function: setupLighting ---
 // Configures light sources and material properties.
@@ -85,7 +107,7 @@ void loadTextures() {
     else {
         std::cout << "failed to load Finish line Texture" << std::endl;
     }
-        
+
 }
 
 
@@ -100,7 +122,7 @@ void drawBackground() {
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
     glLoadIdentity();
-    
+
     glDisable(GL_LIGHTING);
     glDisable(GL_DEPTH_TEST);
 
@@ -161,13 +183,13 @@ void drawFinishLine() {
 
     glBegin(GL_QUADS);
     glTexCoord2f(0, 0);
-    glVertex3f(-2.5, 0.0, -70.0);
+    glVertex3f(-2.5, 0.0, -100.0);
     glTexCoord2f(1, 0);
-    glVertex3f(2.5, 0.0, -70.0);
+    glVertex3f(2.5, 0.0, -100.0);
     glTexCoord2f(1, 1);
-    glVertex3f(2.5, 0.4, -70.0);
+    glVertex3f(2.5, 0.4, -100.0);
     glTexCoord2f(0, 1);
-    glVertex3f(-2.5, 0.4, -70.0);
+    glVertex3f(-2.5, 0.4, -100.0);
     glEnd();
 
     glDisable(GL_TEXTURE_2D);
@@ -183,19 +205,36 @@ void drawBall() {
     glPopMatrix();
 }
 
+void drawObstacles() {
+    glColor3f(1.0f, 1.0f, 0.0f); // yellow
+
+    for (int i = 0; i < obstacleCount; i++)
+    {
+        glPushMatrix();
+        glTranslatef(lanes[obstacleLane[i]], 0.5f, obstacleZ[i]);
+        glutSolidSphere(obstacleRadius, 20, 20);
+        glPopMatrix();
+    }
+}
+
+
 void mydraw() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     drawBackground();
     glLoadIdentity();
-    gluLookAt(0.0, 3.5, 12.0,
-        0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0);
+    gluLookAt(
+        ballX, 3.5f, ballZ + 7.0f,   // camera position (behind ball)
+        ballX, 0.0f, ballZ,          // look at ball
+        0.0f, 1.0f, 0.0f
+    );
 
- 
+
     // Calling modular drawing functions
     drawTrack();
     drawFinishLine();
+    drawObstacles();
     drawBall();
+    collision();
 
     glutSwapBuffers();
 }
@@ -208,6 +247,29 @@ void reshape(int w, int h) {
     glLoadIdentity();
     gluPerspective(45.0, ratio, 1.0, 100.0);
     glMatrixMode(GL_MODELVIEW);
+}
+
+//collision function
+void collision() {
+
+    // finish line
+    if (ballZ - ballRadius <= finishZ + 0.4f) {
+        gameWon = true;
+        /*std::cout << "YOU WIN!" << std::endl;*/
+    }
+
+    // obstacle collision
+    for (int i = 0; i < obstacleCount; i++) {
+
+        bool sameLane = (currentLane == obstacleLane[i]);
+        bool closeZ = abs(ballZ - obstacleZ[i]) < 1.0f;
+        bool notJumpingOver = ballY < 1.4f;
+
+        if (sameLane && closeZ && notJumpingOver) {
+            gameOver = true;
+            std::cout << "GAME OVER!" << std::endl;
+        }
+    }
 }
 
 // --- Function: keyboard ---
@@ -225,13 +287,85 @@ void keyboard(unsigned char key, int x, int y) {
     case 27: // ESC key
         exit(0);
         break;
+
+    case 13 :   // Enter key
+        if (!jumping)
+            jumping = true;
+        break;
+
+    case 32:   // space
+        if (!jumping)
+            jumping = true;
+        break;
     }
 }
 
+void specialKeyboard(int key, int x, int y)
+{
+    if (gameWon || gameOver) return;
+
+    gameStarted = true;
+
+    switch (key)
+    {
+    case GLUT_KEY_LEFT:
+        if (currentLane > 0)
+            currentLane--;
+        break;
+
+    case GLUT_KEY_RIGHT:
+        if (currentLane < 2)
+            currentLane++;
+        break;
+
+    case GLUT_KEY_UP:
+        ballZ -= 0.5f;
+        break;
+
+    case GLUT_KEY_DOWN:
+        ballZ += 0.5f;
+        break;
+    }
+
+    // move ball instantly to lane
+    ballX = lanes[currentLane];
+
+    glutPostRedisplay();
+}
+
+
+
 void timer(int v) {
+
+    if (!gameWon && !gameOver && gameStarted) {
+        ballZ -= 0.2f;
+    }
+
+
+    // Jump up
+    if (jumping && !falling) {
+        ballY += 0.2f;
+
+        if (ballY >= jumpHeight) {
+            falling = true;
+        }
+    }
+
+    // Fall down
+    if (falling) {
+        ballY -= 0.2f;
+
+        if (ballY <= groundY) {
+            ballY = groundY;
+            jumping = false;
+            falling = false;
+        }
+    }
+
     glutPostRedisplay();
     glutTimerFunc(1000 / 60, timer, 0);
 }
+
 
 int main(int argc, char** argv) {
     glutInit(&argc, argv);
@@ -247,6 +381,7 @@ int main(int argc, char** argv) {
     glutDisplayFunc(mydraw);
     glutReshapeFunc(reshape);
     glutKeyboardFunc(keyboard);
+    glutSpecialFunc(specialKeyboard);
     glutTimerFunc(0, timer, 0);
 
     glutMainLoop();
