@@ -11,6 +11,7 @@ float ballX = 0.0f, ballY = 0.5f, ballZ = 5.0f;
 int currentLane = 1; // 0 = left, 1 = center, 2 = right
 float lanes[3] = { -2.0f, 0.0f, 2.0f };
 bool isFullScreen = true;
+float ballRotation = 0.0f;
 //--- jumb variables ---
 bool jumping = false;
 bool falling = false;
@@ -216,6 +217,7 @@ void drawBall() {
     glColor3f(1.0f, 0.0f, 0.6f);
     glPushMatrix();
     glTranslatef(ballX, ballY, ballZ);
+    glRotatef(ballRotation, 1.0f, 0.0f, 0.0f);
     glutWireSphere(0.6, 20, 20);
     glPopMatrix();
 }
@@ -389,6 +391,7 @@ void timer(int v) {
 
     if (!gameWon && !gameOver && gameStarted) {
         ballZ -= 0.2f;
+         ballRotation += 4.0f;
     }
 
 
