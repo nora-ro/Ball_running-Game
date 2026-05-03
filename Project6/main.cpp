@@ -2,6 +2,9 @@
 #include<GL/stb_image.h>
 #include <GL/glut.h>
 #include <iostream>
+#include<Windows.h>
+#include <mmsystem.h> 
+#pragma comment(lib, "winmm.lib")
 
 // --- Global Variables ---
 float ballX = 0.0f, ballY = 0.5f, ballZ = 5.0f;
@@ -21,13 +24,24 @@ int width, height, nrChannel;
 bool gameStarted = false;
 bool gameWon = false;
 float ballRadius = 0.6f;
-float finishZ = -100.0f;
+float finishZ = -99.5f;
 bool gameOver = false;
 // --- obstacle balls ---
 const int obstacleCount = 6;
-float obstacleZ[obstacleCount] ={ -10.0f, -25.0f,-40.0f,-55.0f,-70.0f,-85.0f};
-int obstacleLane[obstacleCount] ={0,2,1,0,2,1};
+float obstacleZ[obstacleCount] = { -10.0f, -25.0f,-40.0f,-55.0f,-70.0f,-85.0f };
+int obstacleLane[obstacleCount] = { 0,2,1,0,2,1 };
 float obstacleRadius = 0.35f;
+float obsColors[6][3] = {
+    {1.0f, 0.0f, 0.0f}, 
+    {0.0f, 1.0f, 0.0f},
+    {1.0f, 1.0f, 0.0f},
+    {1.0f, 0.0f, 1.0f}, 
+    {0.0f, 1.0f, 1.0f}, 
+    {1.0f, 0.5f, 0.0f}  
+};
+//--sound variabls--
+bool winSoundPlayed = false;
+bool loseSoundPlayed = false;
 
 
 // --- Function Prototypes ---
@@ -39,6 +53,7 @@ void drawFinishLine();
 void drawBall();
 void drawObstacles();
 void collision();
+void resetGame();
 
 
 // --- Function: setupLighting ---
@@ -183,13 +198,13 @@ void drawFinishLine() {
 
     glBegin(GL_QUADS);
     glTexCoord2f(0, 0);
-    glVertex3f(-2.5, 0.0, -100.0);
-    glTexCoord2f(1, 0);
-    glVertex3f(2.5, 0.0, -100.0);
-    glTexCoord2f(1, 1);
-    glVertex3f(2.5, 0.4, -100.0);
+    glVertex3f(-2.5, 0.1, -96.0);
+    glTexCoord2f(5, 0);
+    glVertex3f(2.5, 0.1, -96.0);
+    glTexCoord2f(5, 1);
+    glVertex3f(2.5, 0.1, -98.5);
     glTexCoord2f(0, 1);
-    glVertex3f(-2.5, 0.4, -100.0);
+    glVertex3f(-2.5, 0.1, -98.5);
     glEnd();
 
     glDisable(GL_TEXTURE_2D);
@@ -210,9 +225,10 @@ void drawObstacles() {
 
     for (int i = 0; i < obstacleCount; i++)
     {
+        glColor3fv(obsColors[i]);
         glPushMatrix();
         glTranslatef(lanes[obstacleLane[i]], 0.5f, obstacleZ[i]);
-        glutSolidSphere(obstacleRadius, 20, 20);
+        glutWireSphere(obstacleRadius, 20, 20);
         glPopMatrix();
     }
 }
@@ -256,6 +272,10 @@ void collision() {
     if (ballZ - ballRadius <= finishZ + 0.4f) {
         gameWon = true;
         /*std::cout << "YOU WIN!" << std::endl;*/
+        if (!winSoundPlayed) {
+            PlaySound(TEXT("WinGame.wav"), NULL, SND_FILENAME | SND_ASYNC);
+            winSoundPlayed = true;
+        }
     }
 
     // obstacle collision
@@ -264,14 +284,37 @@ void collision() {
         bool sameLane = (currentLane == obstacleLane[i]);
         bool closeZ = abs(ballZ - obstacleZ[i]) < 1.0f;
         bool notJumpingOver = ballY < 1.4f;
-
-        if (sameLane && closeZ && notJumpingOver) {
+        if (sameLane && closeZ && notJumpingOver && !gameOver) {
             gameOver = true;
             std::cout << "GAME OVER!" << std::endl;
+            if (!loseSoundPlayed) {
+                PlaySound(TEXT("gameover.wav"), NULL, SND_FILENAME | SND_ASYNC);
+                loseSoundPlayed = true;
+            }
+            
         }
     }
 }
 
+
+void resetGame() {
+    ballX = 0.0f;
+    ballY = 0.5f;
+    ballZ = 5.0f;
+    currentLane = 1;
+
+    jumping = false;
+    falling = false;
+
+    gameStarted = false;
+    gameOver = false;
+    gameWon = false;
+
+    winSoundPlayed = false;
+    loseSoundPlayed = false;
+
+    std::cout << "Game Reset!" << std::endl;
+}
 // --- Function: keyboard ---
 // Handles key presses for window management and quitting.
 void keyboard(unsigned char key, int x, int y) {
@@ -284,20 +327,27 @@ void keyboard(unsigned char key, int x, int y) {
             isFullScreen = false;
         }
         break;
+    case 'r':
+    case 'R':
+        resetGame();
+        break;
     case 27: // ESC key
         exit(0);
         break;
 
-    case 13 :   // Enter key
+    case 13:   // Enter key
         if (!jumping)
             jumping = true;
         break;
 
     case 32:   // space
-        if (!jumping)
+        if (!jumping) {
             jumping = true;
+            PlaySound(TEXT("JumpBall.wav"), NULL, SND_FILENAME | SND_ASYNC);
+        }
         break;
     }
+    glutPostRedisplay();
 }
 
 void specialKeyboard(int key, int x, int y)
