@@ -1,48 +1,63 @@
-#define STB_IMAGE_IMPLEMENTATION
-#include<GL/stb_image.h>
+﻿#define STB_IMAGE_IMPLEMENTATION
+#include <GL/stb_image.h>
 #include <GL/glut.h>
 #include <iostream>
-#include<Windows.h>
-#include <mmsystem.h> 
+#include <string>
+#include <Windows.h>
+#include <mmsystem.h>
 #pragma comment(lib, "winmm.lib")
+
 
 // --- Global Variables ---
 float ballX = 0.0f, ballY = 0.5f, ballZ = 5.0f;
+
 int currentLane = 1; // 0 = left, 1 = center, 2 = right
 float lanes[3] = { -2.0f, 0.0f, 2.0f };
 bool isFullScreen = true;
 float ballRotation = 0.0f;
-//--- jumb variables ---
+
+// --- jump variables ---
 bool jumping = false;
 bool falling = false;
 float groundY = 0.5f;
 float jumpHeight = 3.5f;
+
 // --- for Texture ---
 unsigned char* data = NULL;
 unsigned int backTexture, TrackTexture, FLineTexture;
 int width, height, nrChannel;
+
 // --- collision variables ---
 bool gameStarted = false;
 bool gameWon = false;
 float ballRadius = 0.6f;
 float finishZ = -99.5f;
 bool gameOver = false;
+
 // --- obstacle balls ---
 const int obstacleCount = 6;
-float obstacleZ[obstacleCount] = { -10.0f, -25.0f,-40.0f,-55.0f,-70.0f,-85.0f };
-int obstacleLane[obstacleCount] = { 0,2,1,0,2,1 };
+float obstacleZ[obstacleCount] = { -10.0f, -25.0f, -40.0f, -55.0f, -70.0f, -85.0f };
+int obstacleLane[obstacleCount] = { 0, 2, 1, 0, 2, 1 };
 float obstacleRadius = 0.35f;
+
 float obsColors[6][3] = {
-    {1.0f, 0.0f, 0.0f}, 
+    {1.0f, 0.0f, 0.0f},
     {0.0f, 1.0f, 0.0f},
     {1.0f, 1.0f, 0.0f},
-    {1.0f, 0.0f, 1.0f}, 
-    {0.0f, 1.0f, 1.0f}, 
-    {1.0f, 0.5f, 0.0f}  
+    {1.0f, 0.0f, 1.0f},
+    {0.0f, 1.0f, 1.0f},
+    {1.0f, 0.5f, 0.0f}
 };
-//--sound variabls--
+
+// --- Score Variables ---
+int score = 0;
+bool obstaclePassed[obstacleCount] = { false, false, false, false, false, false };
+
+// --- sound variables ---
 bool winSoundPlayed = false;
 bool loseSoundPlayed = false;
+
+int windowWidth = 1280;
 
 
 // --- Function Prototypes ---
@@ -53,12 +68,14 @@ void drawTrack();
 void drawFinishLine();
 void drawBall();
 void drawObstacles();
+void drawScore();
 void collision();
 void resetGame();
+void mouseMove(int x, int y);
+void mouseClick(int button, int state, int x, int y);
 
 
 // --- Function: setupLighting ---
-// Configures light sources and material properties.
 void setupLighting() {
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
@@ -73,6 +90,7 @@ void setupLighting() {
     glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
 }
 
+
 void init() {
     glClearColor(0.02f, 0.02f, 0.1f, 1.0f);
     glEnable(GL_DEPTH_TEST);
@@ -85,21 +103,34 @@ void Check(unsigned int& imgnum, unsigned char* data) {
     if (data) {
         glGenTextures(1, &imgnum);
         glBindTexture(GL_TEXTURE_2D, imgnum);
+
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+
+        glTexImage2D(
+            GL_TEXTURE_2D,
+            0,
+            GL_RGB,
+            width,
+            height,
+            0,
+            GL_RGB,
+            GL_UNSIGNED_BYTE,
+            data
+        );
+
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
     }
     else {
         std::cout << "failed to load texture!" << std::endl;
     }
+
     stbi_image_free(data);
 }
 
 
 void loadTextures() {
-    //load the background texture
+    // load the background texture
     data = stbi_load("Background.jpg", &width, &height, &nrChannel, 0);
     if (data) {
         Check(backTexture, data);
@@ -107,7 +138,8 @@ void loadTextures() {
     else {
         std::cout << "failed to load background Texture" << std::endl;
     }
-    //load the track texture
+
+    // load the track texture
     data = stbi_load("Track.jpg", &width, &height, &nrChannel, 0);
     if (data) {
         Check(TrackTexture, data);
@@ -115,7 +147,8 @@ void loadTextures() {
     else {
         std::cout << "failed to load Track Texture" << std::endl;
     }
-    //load the FinishLine texture
+
+    // load the FinishLine texture
     data = stbi_load("race-finish.jpg", &width, &height, &nrChannel, 0);
     if (data) {
         Check(FLineTexture, data);
@@ -123,9 +156,7 @@ void loadTextures() {
     else {
         std::cout << "failed to load Finish line Texture" << std::endl;
     }
-
 }
-
 
 
 void drawBackground() {
@@ -146,75 +177,96 @@ void drawBackground() {
     glBindTexture(GL_TEXTURE_2D, backTexture);
 
     glColor3f(1, 1, 1);
+
     glBegin(GL_QUADS);
     glTexCoord2f(0, 1);
     glVertex2f(0, 0);
+
     glTexCoord2f(1, 1);
     glVertex2f(1, 0);
+
     glTexCoord2f(1, 0);
     glVertex2f(1, 1);
+
     glTexCoord2f(0, 0);
     glVertex2f(0, 1);
     glEnd();
 
-    //Return the 3D environment
+    // Return the 3D environment
     glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
     glDisable(GL_TEXTURE_2D);
 
     glPopMatrix();
+
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
-    glMatrixMode(GL_MODELVIEW);
 
+    glMatrixMode(GL_MODELVIEW);
 }
 
+
 // --- Function: drawTrack ---
-// Dedicated function to render the space track.
 void drawTrack() {
     glDisable(GL_LIGHTING);
+
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, TrackTexture);
+
     glColor3f(1, 1, 1);
 
     glBegin(GL_QUADS);
     glTexCoord2f(0, 0);
     glVertex3f(-2.5, 0.0, 15.0);
+
     glTexCoord2f(1, 0);
     glVertex3f(2.5, 0.0, 15.0);
+
     glTexCoord2f(1, 1);
     glVertex3f(2.5, 0.0, -100.0);
+
     glTexCoord2f(0, 1);
     glVertex3f(-2.5, 0.0, -100.0);
     glEnd();
 
     glDisable(GL_TEXTURE_2D);
+
     glEnable(GL_LIGHTING);
 }
+
+
 void drawFinishLine() {
     glDisable(GL_LIGHTING);
+
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, FLineTexture);
+
     glColor3f(1, 1, 1);
 
     glBegin(GL_QUADS);
     glTexCoord2f(0, 0);
     glVertex3f(-2.5, 0.1, -96.0);
+
     glTexCoord2f(5, 0);
     glVertex3f(2.5, 0.1, -96.0);
+
     glTexCoord2f(5, 1);
     glVertex3f(2.5, 0.1, -98.5);
+
     glTexCoord2f(0, 1);
     glVertex3f(-2.5, 0.1, -98.5);
     glEnd();
 
     glDisable(GL_TEXTURE_2D);
+
     glEnable(GL_LIGHTING);
 }
+
+
 // --- Function: drawBall ---
-// Dedicated function to render the player ball.
 void drawBall() {
     glColor3f(1.0f, 0.0f, 0.6f);
+
     glPushMatrix();
     glTranslatef(ballX, ballY, ballZ);
     glRotatef(ballRotation, 1.0f, 0.0f, 0.0f);
@@ -222,12 +274,11 @@ void drawBall() {
     glPopMatrix();
 }
 
-void drawObstacles() {
-    glColor3f(1.0f, 1.0f, 0.0f); // yellow
 
-    for (int i = 0; i < obstacleCount; i++)
-    {
+void drawObstacles() {
+    for (int i = 0; i < obstacleCount; i++) {
         glColor3fv(obsColors[i]);
+
         glPushMatrix();
         glTranslatef(lanes[obstacleLane[i]], 0.5f, obstacleZ[i]);
         glutWireSphere(obstacleRadius, 20, 20);
@@ -236,44 +287,94 @@ void drawObstacles() {
 }
 
 
+// --- Function: drawScore ---
+void drawScore() {
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+
+    gluOrtho2D(0, 1280, 0, 720);
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    glDisable(GL_LIGHTING);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_TEXTURE_2D);
+
+    glColor3f(1.0f, 1.0f, 1.0f);
+
+    std::string text = "Score: " + std::to_string(score);
+
+    glRasterPos2f(30, 680);
+
+    for (char c : text) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+    }
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+
+    glPopMatrix();
+
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+
+    glMatrixMode(GL_MODELVIEW);
+}
+
+
 void mydraw() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     drawBackground();
+
     glLoadIdentity();
+
     gluLookAt(
-        ballX, 3.5f, ballZ + 7.0f,   // camera position (behind ball)
+        ballX, 3.5f, ballZ + 7.0f,   // camera position behind ball
         ballX, 0.0f, ballZ,          // look at ball
         0.0f, 1.0f, 0.0f
     );
 
-
-    // Calling modular drawing functions
     drawTrack();
     drawFinishLine();
     drawObstacles();
     drawBall();
+
     collision();
+
+    drawScore();
 
     glutSwapBuffers();
 }
 
+
 void reshape(int w, int h) {
     if (h == 0) h = 1;
+
+    windowWidth = w;
+
     float ratio = w / (float)h;
+
     glViewport(0, 0, w, h);
+
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
+
     gluPerspective(45.0, ratio, 1.0, 100.0);
+
     glMatrixMode(GL_MODELVIEW);
 }
 
-//collision function
-void collision() {
 
+// collision function
+void collision() {
     // finish line
-    if (ballZ - ballRadius <= finishZ + 0.4f) {
+    if (ballZ - ballRadius <= finishZ + 0.4f && !gameWon) {
         gameWon = true;
-        /*std::cout << "YOU WIN!" << std::endl;*/
+
         if (!winSoundPlayed) {
             PlaySound(TEXT("WinGame.wav"), NULL, SND_FILENAME | SND_ASYNC);
             winSoundPlayed = true;
@@ -282,18 +383,19 @@ void collision() {
 
     // obstacle collision
     for (int i = 0; i < obstacleCount; i++) {
-
         bool sameLane = (currentLane == obstacleLane[i]);
         bool closeZ = abs(ballZ - obstacleZ[i]) < 1.0f;
         bool notJumpingOver = ballY < 1.4f;
+
         if (sameLane && closeZ && notJumpingOver && !gameOver) {
             gameOver = true;
+
             std::cout << "GAME OVER!" << std::endl;
+
             if (!loseSoundPlayed) {
                 PlaySound(TEXT("gameover.wav"), NULL, SND_FILENAME | SND_ASYNC);
                 loseSoundPlayed = true;
             }
-            
         }
     }
 }
@@ -303,6 +405,7 @@ void resetGame() {
     ballX = 0.0f;
     ballY = 0.5f;
     ballZ = 5.0f;
+
     currentLane = 1;
 
     jumping = false;
@@ -315,51 +418,64 @@ void resetGame() {
     winSoundPlayed = false;
     loseSoundPlayed = false;
 
+    score = 0;
+
+    for (int i = 0; i < obstacleCount; i++) {
+        obstaclePassed[i] = false;
+    }
+
     std::cout << "Game Reset!" << std::endl;
 }
+
+
 // --- Function: keyboard ---
-// Handles key presses for window management and quitting.
 void keyboard(unsigned char key, int x, int y) {
     switch (key) {
     case 'q':
     case 'Q':
         if (isFullScreen) {
-            glutReshapeWindow(1280, 720); // Resize to windowed mode
+            glutReshapeWindow(1280, 720);
             glutPositionWindow(100, 100);
             isFullScreen = false;
         }
         break;
+
     case 'r':
     case 'R':
         resetGame();
         break;
+
     case 27: // ESC key
         exit(0);
         break;
 
-    case 13:   // Enter key
+    case 13: // Enter key
         if (!jumping)
             jumping = true;
         break;
 
-    case 32:   // space
+    case 32: // Space
         if (!jumping) {
             jumping = true;
             PlaySound(TEXT("JumpBall.wav"), NULL, SND_FILENAME | SND_ASYNC);
         }
+
+        if (!gameStarted)
+            gameStarted = true;
+
         break;
     }
+
     glutPostRedisplay();
 }
 
-void specialKeyboard(int key, int x, int y)
-{
+
+void specialKeyboard(int key, int x, int y) {
     if (gameWon || gameOver) return;
 
     gameStarted = true;
 
-    switch (key)
-    {
+    switch (key) {
     case GLUT_KEY_LEFT:
         if (currentLane > 0)
             currentLane--;
@@ -386,14 +502,21 @@ void specialKeyboard(int key, int x, int y)
 }
 
 
-
 void timer(int v) {
-
     if (!gameWon && !gameOver && gameStarted) {
         ballZ -= 0.2f;
-         ballRotation += 4.0f;
-    }
+        ballRotation += 4.0f;
 
+        // Increase score when ball passes an obstacle
+        for (int i = 0; i < obstacleCount; i++) {
+            if (!obstaclePassed[i] && ballZ < obstacleZ[i]) {
+                score++;
+                obstaclePassed[i] = true;
+
+                std::cout << "Score: " << score << std::endl;
+            }
+        }
+    }
 
     // Jump up
     if (jumping && !falling) {
@@ -420,10 +543,37 @@ void timer(int v) {
 }
 
 
+void mouseMove(int x, int y) {
+    float normalized = (float)x / windowWidth; // 0 -> 1
+
+    if (normalized < 0.33)
+        currentLane = 0;
+    else if (normalized < 0.66)
+        currentLane = 1;
+    else
+        currentLane = 2;
+
+    ballX = lanes[currentLane];
+}
+
+
+void mouseClick(int button, int state, int x, int y) {
+    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+        if (!jumping) {
+            jumping = true;
+        }
+
+        gameStarted = true;
+    }
+}
+
+
 int main(int argc, char** argv) {
     glutInit(&argc, argv);
+
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
     glutInitWindowSize(1280, 720);
+
     glutCreateWindow("Space Runner 3D");
 
     // Start in Full Screen mode
@@ -436,7 +586,10 @@ int main(int argc, char** argv) {
     glutKeyboardFunc(keyboard);
     glutSpecialFunc(specialKeyboard);
     glutTimerFunc(0, timer, 0);
+    glutPassiveMotionFunc(mouseMove);
+    glutMouseFunc(mouseClick);
 
     glutMainLoop();
+
     return 0;
 }
