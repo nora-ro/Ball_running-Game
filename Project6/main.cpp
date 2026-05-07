@@ -151,7 +151,7 @@ void Check(unsigned int& imgnum, unsigned char* data) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     }
     else {
-        std::cout << "failed to load texture!" << std::endl;
+        std::cout << "D:/visual studio c++/GCFinalProject/x64/Debug/failed to load texture!" << std::endl;
     }
 
     stbi_image_free(data);
@@ -160,7 +160,7 @@ void Check(unsigned int& imgnum, unsigned char* data) {
 
 void loadTextures() {
     // load the background texture
-    data = stbi_load("Background.jpg", &width, &height, &nrChannel, 0);
+    data = stbi_load("D:/visual studio c++/GCFinalProject/x64/Debug/Background.jpg", &width, &height, &nrChannel, 0);
     if (data) {
         Check(backTexture, data);
     }
@@ -169,7 +169,7 @@ void loadTextures() {
     }
 
     // load the track texture
-    data = stbi_load("Track.jpg", &width, &height, &nrChannel, 0);
+    data = stbi_load("D:/visual studio c++/GCFinalProject/x64/Debug/Track.jpg", &width, &height, &nrChannel, 0);
     if (data) {
         Check(TrackTexture, data);
     }
@@ -178,7 +178,7 @@ void loadTextures() {
     }
 
     // load the FinishLine texture
-    data = stbi_load("race-finish.jpg", &width, &height, &nrChannel, 0);
+    data = stbi_load("D:/visual studio c++/GCFinalProject/x64/Debug/race-finish.jpg", &width, &height, &nrChannel, 0);
     if (data) {
         Check(FLineTexture, data);
     }
@@ -389,10 +389,10 @@ void mydraw() {
     drawBall();
 
     collision();
-    
+
     drawScore();
 
-   
+
     glutSwapBuffers();
 }
 
@@ -453,7 +453,7 @@ void collision() {
         if (sameLane && closeZ && closeY && !coinCollected[i]) {
             coinCollected[i] = true;
             score += 5;
-
+            PlaySound(TEXT("JumpBall.wav"), NULL, SND_FILENAME | SND_ASYNC);
             std::cout << "Coin collected! Score: " << score << std::endl;
         }
     }
@@ -518,7 +518,7 @@ void keyboard(unsigned char key, int x, int y) {
     case 32: // Space
         if (!jumping) {
             jumping = true;
-            PlaySound(TEXT("JumpBall.wav"), NULL, SND_FILENAME | SND_ASYNC);
+           
         }
 
         if (!gameStarted)
@@ -567,7 +567,7 @@ void timer(int v) {
     if (!gameWon && !gameOver && gameStarted) {
         ballZ -= 0.2f;
         ballRotation += 4.0f;
-        
+
     }
 
     // Jump up
