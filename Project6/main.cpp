@@ -1,4 +1,4 @@
-﻿#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
 #include <GL/stb_image.h>
 #include <GL/glut.h>
 #include <iostream>
@@ -59,6 +59,34 @@ bool loseSoundPlayed = false;
 
 int windowWidth = 1280;
 
+// --- coin variables ---
+const int coinCount = 18;
+
+float coinZ[coinCount] = {
+    -8,-12,-16,
+    -22,-26,-30,
+    -36,-40,-44,
+    -50,-54,-58,
+    -64,-68,-72,
+    -78,-82,-86
+};
+
+int coinLane[coinCount] = {
+    0,1,2,
+    1,2,0,
+    2,0,1,
+    0,2,1,
+    1,0,2,
+    2,1,0
+};
+
+bool coinCollected[coinCount] = {
+    false,false,false,false,false,false,
+    false,false,false,false,false,false,
+    false,false,false,false,false,false
+};
+float coinRadius = 0.12f;
+
 
 // --- Function Prototypes ---
 void Check(unsigned int& texture, unsigned char* imgnum);
@@ -73,6 +101,7 @@ void collision();
 void resetGame();
 void mouseMove(int x, int y);
 void mouseClick(int button, int state, int x, int y);
+void drawCoins();
 
 
 // --- Function: setupLighting ---
@@ -286,7 +315,22 @@ void drawObstacles() {
     }
 }
 
+void drawCoins() {
+    for (int i = 0; i < coinCount; i++) {
+        if (!coinCollected[i]) {
+            glColor3f(1.0f, 0.84f, 0.0f);
 
+            glPushMatrix();
+            glTranslatef(lanes[coinLane[i]], 1.0f, coinZ[i]);
+
+            // rotate coin
+            glRotatef(ballRotation * 2, 0, 1, 0);
+
+            glutSolidTorus(0.03, 0.12, 12, 20);
+            glPopMatrix();
+        }
+    }
+}
 // --- Function: drawScore ---
 void drawScore() {
     glMatrixMode(GL_PROJECTION);
@@ -341,12 +385,14 @@ void mydraw() {
     drawTrack();
     drawFinishLine();
     drawObstacles();
+    drawCoins();
     drawBall();
 
     collision();
-
+    
     drawScore();
 
+   
     glutSwapBuffers();
 }
 
@@ -398,6 +444,19 @@ void collision() {
             }
         }
     }
+    // coin collection
+    for (int i = 0; i < coinCount; i++) {
+        bool sameLane = (currentLane == coinLane[i]);
+        bool closeZ = abs(ballZ - coinZ[i]) < 0.5f;
+        bool closeY = abs(ballY - 1.0f) < 1.0f;
+
+        if (sameLane && closeZ && closeY && !coinCollected[i]) {
+            coinCollected[i] = true;
+            score += 5;
+
+            std::cout << "Coin collected! Score: " << score << std::endl;
+        }
+    }
 }
 
 
@@ -423,7 +482,9 @@ void resetGame() {
     for (int i = 0; i < obstacleCount; i++) {
         obstaclePassed[i] = false;
     }
-
+    for (int i = 0; i < coinCount; i++) {
+        coinCollected[i] = false;
+    }
     std::cout << "Game Reset!" << std::endl;
 }
 
@@ -506,16 +567,7 @@ void timer(int v) {
     if (!gameWon && !gameOver && gameStarted) {
         ballZ -= 0.2f;
         ballRotation += 4.0f;
-
-        // Increase score when ball passes an obstacle
-        for (int i = 0; i < obstacleCount; i++) {
-            if (!obstaclePassed[i] && ballZ < obstacleZ[i]) {
-                score++;
-                obstaclePassed[i] = true;
-
-                std::cout << "Score: " << score << std::endl;
-            }
-        }
+        
     }
 
     // Jump up
