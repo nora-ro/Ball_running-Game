@@ -160,7 +160,7 @@ void Check(unsigned int& imgnum, unsigned char* data) {
 
 void loadTextures() {
     // load the background texture
-    data = stbi_load("D:/visual studio c++/GCFinalProject/x64/Debug/Background.jpg", &width, &height, &nrChannel, 0);
+    data = stbi_load("Background.jpg", &width, &height, &nrChannel, 0);
     if (data) {
         Check(backTexture, data);
     }
@@ -169,7 +169,7 @@ void loadTextures() {
     }
 
     // load the track texture
-    data = stbi_load("D:/visual studio c++/GCFinalProject/x64/Debug/Track.jpg", &width, &height, &nrChannel, 0);
+    data = stbi_load("Track.jpg", &width, &height, &nrChannel, 0);
     if (data) {
         Check(TrackTexture, data);
     }
@@ -178,7 +178,7 @@ void loadTextures() {
     }
 
     // load the FinishLine texture
-    data = stbi_load("D:/visual studio c++/GCFinalProject/x64/Debug/race-finish.jpg", &width, &height, &nrChannel, 0);
+    data = stbi_load("race-finish.jpg", &width, &height, &nrChannel, 0);
     if (data) {
         Check(FLineTexture, data);
     }
@@ -331,8 +331,11 @@ void drawCoins() {
         }
     }
 }
-// --- Function: drawScore ---
-void drawScore() {
+// --- Function: drawUIText ---
+void drawUIText(float x, float y, void* font,
+    std::string text,
+    float r, float g, float b) {
+
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
@@ -345,16 +348,23 @@ void drawScore() {
 
     glDisable(GL_LIGHTING);
     glDisable(GL_DEPTH_TEST);
-    glDisable(GL_TEXTURE_2D);
 
-    glColor3f(1.0f, 1.0f, 1.0f);
+    // --- Shadow ---
+    glColor3f(0, 0, 0);
 
-    std::string text = "Score: " + std::to_string(score);
-
-    glRasterPos2f(30, 680);
+    glRasterPos2f(x + 2, y - 2);
 
     for (char c : text) {
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+        glutBitmapCharacter(font, c);
+    }
+
+    // --- Main Text ---
+    glColor3f(r, g, b);
+
+    glRasterPos2f(x, y);
+
+    for (char c : text) {
+        glutBitmapCharacter(font, c);
     }
 
     glEnable(GL_DEPTH_TEST);
@@ -367,6 +377,29 @@ void drawScore() {
 
     glMatrixMode(GL_MODELVIEW);
 }
+
+void displyText() {
+    drawUIText(20, 680, GLUT_BITMAP_HELVETICA_12, "Press ESC to Exit", 1, 1, 1);
+    drawUIText(20, 660, GLUT_BITMAP_HELVETICA_12, "Press Enter or Space to Jump", 1, 1, 1);
+    drawUIText(20, 640, GLUT_BITMAP_HELVETICA_12, "Press R to Reset", 1, 1, 1);
+    drawUIText(20, 620, GLUT_BITMAP_HELVETICA_12, "Press Q to exit full Screen Mode", 1, 1, 1);
+    drawUIText(20, 600, GLUT_BITMAP_HELVETICA_12, "using arrow or mouse to play", 1, 1, 1);
+
+    std::string scoreStr = "Score: " + std::to_string(score);
+    drawUIText(580, 670, GLUT_BITMAP_TIMES_ROMAN_24, scoreStr, 1, 1, 1);
+
+
+    if (gameOver) {
+     
+        drawUIText(560, 600, GLUT_BITMAP_TIMES_ROMAN_24, "GAME OVER", 1, 0, 0);
+    }
+    if (gameWon) {
+       
+        drawUIText(560, 600, GLUT_BITMAP_TIMES_ROMAN_24, "YOU WIN!", 0, 1, 0);
+    }
+}
+
+
 
 
 void mydraw() {
@@ -390,7 +423,7 @@ void mydraw() {
 
     collision();
 
-    drawScore();
+    displyText();
 
 
     glutSwapBuffers();
@@ -622,7 +655,6 @@ void mouseClick(int button, int state, int x, int y) {
 
 int main(int argc, char** argv) {
     glutInit(&argc, argv);
-
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
     glutInitWindowSize(1280, 720);
 
