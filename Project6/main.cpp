@@ -121,7 +121,6 @@ void drawTrack();
 void drawFinishLine();
 void drawBall();
 void drawObstacles();
-void drawScore();
 void collision();
 void resetGame();
 void mouseMove(int x, int y);
