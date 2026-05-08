@@ -31,22 +31,36 @@ int width, height, nrChannel;
 bool gameStarted = false;
 bool gameWon = false;
 float ballRadius = 0.6f;
-float finishZ = -99.5f;
+float finishZ = -149.5f;
 bool gameOver = false;
 
 // --- obstacle balls ---
-const int obstacleCount = 6;
-float obstacleZ[obstacleCount] = { -10.0f, -25.0f, -40.0f, -55.0f, -70.0f, -85.0f };
-int obstacleLane[obstacleCount] = { 0, 2, 1, 0, 2, 1 };
+const int obstacleCount = 14;
+//float obstacleZ[obstacleCount] = { -10.0f, -25.0f, -40.0f, -55.0f, -70.0f, -85.0f };
+float obstacleZ[obstacleCount] = {
+    -10.0f, -20.0f, -30.0f,
+    -40.0f, -50.0f, -60.0f,
+    -70.0f, -80.0f, -90.0f,
+    -100.0f, -110.0f, -120.0f, -130.0f, -140.0f };
+int obstacleLane[obstacleCount] = { 0, 2, 1, 0, 2, 1 ,2, 1, 0,
+    1, 2, 0 ,1,2};
 float obstacleRadius = 0.35f;
 
-float obsColors[6][3] = {
+float obsColors[14][3] = {
     {1.0f, 0.0f, 0.0f},
     {0.0f, 1.0f, 0.0f},
     {1.0f, 1.0f, 0.0f},
     {1.0f, 0.0f, 1.0f},
     {0.0f, 1.0f, 1.0f},
-    {1.0f, 0.5f, 0.0f}
+    {1.0f, 0.5f, 0.0f},
+    {1.0f, 0.0f, 0.0f},
+    {0.0f, 1.0f, 0.0f},
+    {1.0f, 1.0f, 0.0f},
+    {1.0f, 0.0f, 1.0f},
+    {0.0f, 1.0f, 1.0f},
+    {1.0f, 0.5f, 0.0f},
+    {1.0f, 0.0f, 0.0f},
+    {0.0f, 1.0f, 0.0f}
 };
 
 // --- Score Variables ---
@@ -60,7 +74,7 @@ bool loseSoundPlayed = false;
 int windowWidth = 1280;
 
 // --- coin variables ---
-const int coinCount = 18;
+const int coinCount = 28;
 
 float coinZ[coinCount] = {
     -8,-12,-16,
@@ -68,7 +82,11 @@ float coinZ[coinCount] = {
     -36,-40,-44,
     -50,-54,-58,
     -64,-68,-72,
-    -78,-82,-86
+    -78,-82,-86,
+    -94, -98, -102,
+    -110, -114, -118,
+    -126, -130, -134,
+    -142
 };
 
 int coinLane[coinCount] = {
@@ -77,13 +95,20 @@ int coinLane[coinCount] = {
     2,0,1,
     0,2,1,
     1,0,2,
-    2,1,0
+    2,1,0,
+    0,1,2,
+    1,2,0,
+    2,0,1,
+    0
+
 };
 
 bool coinCollected[coinCount] = {
     false,false,false,false,false,false,
     false,false,false,false,false,false,
-    false,false,false,false,false,false
+    false,false,false,false,false,false,
+    false,false,false,false,false,false,
+    false,false,false,false
 };
 float coinRadius = 0.12f;
 
@@ -160,7 +185,7 @@ void Check(unsigned int& imgnum, unsigned char* data) {
 
 void loadTextures() {
     // load the background texture
-    data = stbi_load("Background.jpg", &width, &height, &nrChannel, 0);
+    data = stbi_load("D:/visual studio c++/GCFinalProject/x64/Debug/Background.jpg", &width, &height, &nrChannel, 0);
     if (data) {
         Check(backTexture, data);
     }
@@ -169,7 +194,7 @@ void loadTextures() {
     }
 
     // load the track texture
-    data = stbi_load("Track.jpg", &width, &height, &nrChannel, 0);
+    data = stbi_load("D:/visual studio c++/GCFinalProject/x64/Debug/Track.jpg", &width, &height, &nrChannel, 0);
     if (data) {
         Check(TrackTexture, data);
     }
@@ -178,7 +203,7 @@ void loadTextures() {
     }
 
     // load the FinishLine texture
-    data = stbi_load("race-finish.jpg", &width, &height, &nrChannel, 0);
+    data = stbi_load("D:/visual studio c++/GCFinalProject/x64/Debug/race-finish.jpg", &width, &height, &nrChannel, 0);
     if (data) {
         Check(FLineTexture, data);
     }
@@ -252,10 +277,10 @@ void drawTrack() {
     glVertex3f(2.5, 0.0, 15.0);
 
     glTexCoord2f(1, 1);
-    glVertex3f(2.5, 0.0, -100.0);
+    glVertex3f(2.5, 0.0, -150.0);
 
     glTexCoord2f(0, 1);
-    glVertex3f(-2.5, 0.0, -100.0);
+    glVertex3f(-2.5, 0.0, -150.0);
     glEnd();
 
     glDisable(GL_TEXTURE_2D);
@@ -274,16 +299,16 @@ void drawFinishLine() {
 
     glBegin(GL_QUADS);
     glTexCoord2f(0, 0);
-    glVertex3f(-2.5, 0.1, -96.0);
+    glVertex3f(-2.5, 0.1, -146.0);
 
     glTexCoord2f(5, 0);
-    glVertex3f(2.5, 0.1, -96.0);
+    glVertex3f(2.5, 0.1, -146.0);
 
     glTexCoord2f(5, 1);
-    glVertex3f(2.5, 0.1, -98.5);
+    glVertex3f(2.5, 0.1, -148.5);
 
     glTexCoord2f(0, 1);
-    glVertex3f(-2.5, 0.1, -98.5);
+    glVertex3f(-2.5, 0.1, -148.5);
     glEnd();
 
     glDisable(GL_TEXTURE_2D);
